@@ -1,0 +1,18 @@
+# Home security system python program launches at reboot
+#@reboot sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+
+
+# Home security system python program to run between 9am and 6pm Monday through Friday
+
+* 9 * * 1-5 sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+* 18 * * 1-5 sudo reboot
+
+# To run python program between 10pm and 6am every day
+
+* 21 * * 0-6 sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+* 6 * * 0-6 sudo reboot
+
+# To run python program between 9am and 1pm on Saturdays
+
+* 9 * * 6 sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+* 13 * * 6 sudo reboot

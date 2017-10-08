@@ -1,0 +1,105 @@
+# Original code grabbed from:
+# https://circuitdigest.com/microcontroller-projects/raspberry-pi-iot-intruder-alert-system
+# Email portion was not working right. Altered to make sure one image was sent per PIR = high
+# To setup cron job to launch this .py file to run at reboot
+# cron job code: @reboot sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+
+# To setup cron job to run at particular times:
+# First make file executable by running chmod +x </home/filepath/pythonprogramname.py>
+# For me that was:
+# chmod +x  /home/pi/01HomeSecurity/fromcircuitdigest.py
+
+# Now set up cron jobs as below:
+# To run between 9am and 5pm Monday through Friday:
+# * 9-17 * * 1-5 sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+
+# To run between 10pm and 6am every day
+# * 22-6 * * 0-6 sleep 10 && python /home/pi/01HomeSecurity/fromcircuitdigest.py
+
+
+# To kill cron job run: ps aux | grep /home/pi/01HomeSecurity/fromcircuitdigest.py
+# Locate the job number for the fromcircuitdigest.py and kill it
+# To kill the job: sudo kill #### (Where #### is the job number)
+
+#!/usr/bin/env python
+
+import RPi.GPIO as gpio
+import picamera
+import time
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.utils import COMMASPACE, formatdate
+from email import encoders
+from email.mime.image import MIMEImage
+
+
+led=17
+pir=18
+HIGH=1
+LOW=0
+gpio.setwarnings(False)
+gpio.setmode(gpio.BCM)
+gpio.setup(led, gpio.OUT)            # initialize GPIO Pin as outputs
+gpio.setup(pir, gpio.IN)            # initialize GPIO Pin as input
+data=""
+def sendMail(data):
+    fromaddr = '<yourgmailid>@gmail.com'    # change the email address accordingly
+    toaddr = '<yourgmailid>@gmail.com'
+    mail = MIMEMultipart()
+    mail['From'] = fromaddr
+    mail['To'] = toaddr
+    mail['Subject'] = "Intruder alert!"
+    body = "Someone is home!"
+    mail.attach(MIMEText(body, 'plain'))
+    filename = '%s.jpg'%data
+    attachment = open((filename),'rb')
+    
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload((attachment).read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+    
+    mail.attach(part)
+    
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "<gmailpassword>")
+    text = mail.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+    
+    
+def capture_image():
+    data= time.strftime("%d_%b_%Y|%H:%M:%S")
+    time.sleep(1)
+    #camera.start_preview()
+    #time.sleep(1)
+    camera.capture('%s.jpg'%data)
+    #print ("image captured on "+ data)
+    #camera.stop_preview()
+    #time.sleep(0.5)
+    sendMail(data)
+
+
+gpio.output(led , 0)
+camera = picamera.PiCamera()
+camera.rotation=90
+camera.awb_mode= 'auto'
+camera.brightness=55
+
+while 1:
+    if gpio.input(pir)==1:
+        print("Motion detected!")
+        #gpio.output(led, HIGH)
+        capture_image()
+                
+        while(gpio.input(pir)==1):
+            time.sleep(1)
+        
+    else:
+        #gpio.output(led, LOW)
+        #print("led low")
+        time.sleep(0.01)
+
